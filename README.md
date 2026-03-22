@@ -30,3 +30,9 @@ yarn test
 ```
   <TimeLineHeader start={9} end={20} />
 ```
+
+- 룸은 무엇으로 반복되는지, 어디에 노출되는지 확인하고 싶다. map은 그대로 두고 css, html만 숨겨서 룸이름이 잘 보이도록 개선한다.
+
+```
+ <TimeLineRoom name={room.name} />
+```

@@ -130,25 +130,7 @@ export function ReservationStatusPage() {
                 `}
               >
                 {/* 룸 네임 */}
-                <div
-                  css={css`
-                    width: 80px;
-                    flex-shrink: 0;
-                    padding-right: 8px;
-                  `}
-                >
-                  <Text
-                    typography="t7"
-                    fontWeight="medium"
-                    color={colors.grey700}
-                    ellipsisAfterLines={1}
-                    css={css`
-                      font-size: 12px;
-                    `}
-                  >
-                    {room.name}
-                  </Text>
-                </div>
+                <TimeLineRoom name={room.name} />
 
                 {/* 타임라인 */}
                 <div
@@ -499,6 +481,33 @@ function TimeLineHeader({ start, end }: TimeLineHeaderType) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+type TimeLineRoomType = {
+  name: string;
+};
+function TimeLineRoom({ name }: TimeLineRoomType) {
+  return (
+    <div
+      css={css`
+        width: 80px;
+        flex-shrink: 0;
+        padding-right: 8px;
+      `}
+    >
+      <Text
+        typography="t7"
+        fontWeight="medium"
+        color={colors.grey700}
+        ellipsisAfterLines={1}
+        css={css`
+          font-size: 12px;
+        `}
+      >
+        {name}
+      </Text>
     </div>
   );
 }
