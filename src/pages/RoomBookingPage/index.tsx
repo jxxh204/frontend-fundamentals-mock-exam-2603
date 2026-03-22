@@ -9,11 +9,10 @@ import { getRooms, getReservations, createReservation } from 'pages/remotes';
 import axios from 'axios';
 import { DatePicker } from 'pages/components/DatePicker';
 import { NumberStepper } from 'pages/components/NumberStepper';
+import { ChipGroup } from 'pages/components/ChipGroup';
 import { Section } from 'pages/ui/Section';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START } from 'pages/constants';
 import { generateTimeSlots } from 'pages/utils';
-
-const ALL_EQUIPMENT = ['tv', 'whiteboard', 'video', 'speaker'];
 
 function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -108,9 +107,6 @@ export function RoomBookingPage() {
 
   const hasTimeInputs = startTime !== '' && endTime !== '';
   const isFilterComplete = hasTimeInputs && !errors.endTime && !errors.attendees;
-
-  // 필터링
-  const floors = [...new Set(rooms.map((r: { floor: number }) => r.floor))].sort((a: number, b: number) => a - b);
 
   const availableRooms = isFilterComplete
     ? rooms
@@ -401,11 +397,13 @@ export function RoomBookingPage() {
                   aria-label="선호 층"
                 >
                   <option value="">전체</option>
-                  {floors.map((f: number) => (
-                    <option key={f} value={f}>
-                      {f}층
-                    </option>
-                  ))}
+                  {[...new Set(rooms.map((room: { floor: number }) => room.floor))]
+                    .sort((a: number, b: number) => a - b)
+                    .map((f: number) => (
+                      <option key={f} value={f}>
+                        {f}층
+                      </option>
+                    ))}
                 </Select>
               )}
             />
@@ -423,46 +421,14 @@ export function RoomBookingPage() {
             name="equipment"
             control={control}
             render={({ field }) => (
-              <div
-                css={css`
-                  display: flex;
-                  gap: 8px;
-                  flex-wrap: wrap;
-                `}
-              >
-                {ALL_EQUIPMENT.map(eq => {
-                  const selected = field.value.includes(eq);
-                  return (
-                    <button
-                      key={eq}
-                      type="button"
-                      onClick={() => {
-                        const next = selected ? field.value.filter(e => e !== eq) : [...field.value, eq];
-                        field.onChange(next);
-                        resetSelection();
-                      }}
-                      aria-label={EQUIPMENT_LABELS[eq]}
-                      aria-pressed={selected}
-                      css={css`
-                        padding: 8px 16px;
-                        border-radius: 20px;
-                        border: 1px solid ${selected ? colors.blue500 : colors.grey200};
-                        background: ${selected ? colors.blue50 : colors.grey50};
-                        color: ${selected ? colors.blue600 : colors.grey700};
-                        font-size: 14px;
-                        font-weight: 500;
-                        cursor: pointer;
-                        transition: all 0.15s;
-                        &:hover {
-                          border-color: ${selected ? colors.blue500 : colors.grey400};
-                        }
-                      `}
-                    >
-                      {EQUIPMENT_LABELS[eq]}
-                    </button>
-                  );
-                })}
-              </div>
+              <ChipGroup
+                options={Object.entries(EQUIPMENT_LABELS).map(([value, label]) => ({ value, label }))}
+                selected={field.value}
+                onChange={(next: string[]) => {
+                  field.onChange(next);
+                  resetSelection();
+                }}
+              />
             )}
           />
         </div>
