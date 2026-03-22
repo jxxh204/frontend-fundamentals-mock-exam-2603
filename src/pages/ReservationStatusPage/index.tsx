@@ -7,6 +7,7 @@ import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, getMyReservations, cancelReservation } from 'pages/remotes';
 import { formatDate } from './utils';
 import { Tooltip } from './ui/Tooltip';
+import { Section } from './ui/Section';
 
 type Room = {
   id: string;
@@ -116,11 +117,7 @@ export function ReservationStatusPage() {
       <Spacing size={24} />
 
       {/* 예약 현황 타임라인 */}
-      <div
-        css={css`
-          padding: 0 24px;
-        `}
-      >
+      <Section>
         <Text typography="t5" fontWeight="bold" color={colors.grey900}>
           예약 현황
         </Text>
@@ -191,7 +188,7 @@ export function ReservationStatusPage() {
             );
           })}
         </div>
-      </div>
+      </Section>
 
       <Spacing size={24} />
       <Border size={8} />
@@ -199,11 +196,7 @@ export function ReservationStatusPage() {
 
       {/* 메시지 배너 */}
       {message && (
-        <div
-          css={css`
-            padding: 0 24px;
-          `}
-        >
+        <Section>
           <div
             css={css`
               padding: 10px 14px;
@@ -223,15 +216,11 @@ export function ReservationStatusPage() {
             </Text>
           </div>
           <Spacing size={12} />
-        </div>
+        </Section>
       )}
 
       {/* 내 예약 목록 */}
-      <div
-        css={css`
-          padding: 0 24px;
-        `}
-      >
+      <Section>
         <div
           css={css`
             display: flex;
@@ -323,7 +312,7 @@ export function ReservationStatusPage() {
             })}
           </div>
         )}
-      </div>
+      </Section>
 
       <Spacing size={24} />
       <Border size={8} />
