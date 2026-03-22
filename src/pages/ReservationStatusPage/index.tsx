@@ -9,6 +9,7 @@ import { formatDate } from './utils';
 import { Banner } from './ui/Banner';
 import { Section } from './ui/Section';
 import { ReservationTimeline } from './ReservationTimeline';
+import { DatePicker } from 'pages/components/DatePicker';
 
 type Room = {
   id: string;
@@ -195,50 +196,6 @@ export function ReservationStatusPage() {
         </Button>
       </div>
       <Spacing size={24} />
-    </div>
-  );
-}
-
-type DatePickerType = {
-  minDate: string;
-  selectedDate: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-};
-
-function DatePicker({ minDate, selectedDate, onChange }: DatePickerType) {
-  return (
-    <div
-      css={css`
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      `}
-    >
-      <input
-        type="date"
-        value={selectedDate}
-        min={minDate}
-        onChange={onChange}
-        aria-label="날짜"
-        css={css`
-          box-sizing: border-box;
-          font-size: 16px;
-          font-weight: 500;
-          line-height: 1.5;
-          height: 48px;
-          background-color: ${colors.grey50};
-          border-radius: 12px;
-          color: ${colors.grey800};
-          width: 100%;
-          border: 1px solid ${colors.grey200};
-          padding: 0 16px;
-          outline: none;
-          transition: border-color 0.15s;
-          &:focus {
-            border-color: ${colors.blue500};
-          }
-        `}
-      />
     </div>
   );
 }
