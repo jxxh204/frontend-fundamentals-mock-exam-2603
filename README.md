@@ -53,31 +53,4 @@ yarn test
   </Tooltip>
 ```
 
-- 룸이름, 헤더를 제외한 타임라인은 bar형태로 보이니 bar로 네이밍하고.. 클릭, 툴팁만 궁금해보인다. ui와 보았을때 보이는게 적다. 좀 더 고민이 필요.
-
-```
-    {roomReservations.map((res: Reservation) => {
-                    const isActive = activeReservation === res.id;
-                    return (
-                      <ReservationBar
-                        key={res.id}
-                        res={res}
-                        onClick={() => setActiveReservation(isActive ? null : res.id)}
-                        roomName={room.name}
-                        isActive={isActive}
-                      >
-                        <Tooltip>
-                          <>
-                            <div>
-                              {res.start} ~ {res.end}
-                            </div>
-                            <div>{res.attendees}명</div>
-                            {res.equipment.length > 0 && (
-                              <div>{res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ')}</div>
-                            )}
-                          </>
-                        </Tooltip>
-                      </ReservationBar>
-                    );
-                  })}
-```
+- TimeLineTrack 컴포넌트로 UI가 더 눈에 띄도록 변경, 예약 현황의 예약과 내 예약 모두 나의 예약이다. 내 예약 코드를 보고 판단해야할듯.

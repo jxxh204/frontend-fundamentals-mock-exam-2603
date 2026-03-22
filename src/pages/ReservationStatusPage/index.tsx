@@ -51,13 +51,13 @@ export function ReservationStatusPage() {
   const [date, setDate] = useState(formatDate(new Date()));
 
   // 회의실 별 타임라인, 내 예약
+  const { data: rooms = [] } = useQuery(['rooms'], getRooms);
+
+  // 회의실 별 타임라인
   const [activeReservation, setActiveReservation] = useState<string | null>(null);
   const { data: reservations = [] } = useQuery(['reservations', date], () => getReservations(date), {
     enabled: !!date,
   });
-
-  // 회의실 별 타임라인, 내 예약
-  const { data: rooms = [] } = useQuery(['rooms'], getRooms);
 
   // 내 예약
   const { data: myReservationList = [] } = useQuery(['myReservations'], getMyReservations);
@@ -100,17 +100,13 @@ export function ReservationStatusPage() {
       <Spacing size={24} />
 
       {/* 날짜 선택 */}
-      <div
-        css={css`
-          padding: 0 24px;
-        `}
-      >
+      <Section>
         <Text typography="t5" fontWeight="bold" color={colors.grey900}>
           날짜 선택
         </Text>
         <Spacing size={16} />
         <DatePicker selectedDate={date} minDate={formatDate(new Date())} onChange={e => setDate(e.target.value)} />
-      </div>
+      </Section>
 
       <Spacing size={24} />
       <Border size={8} />
@@ -134,7 +130,6 @@ export function ReservationStatusPage() {
 
           {/* 회의실별 타임라인 */}
           {rooms.map((room: Room, index: number) => {
-            const roomReservations = reservations.filter((r: Reservation) => r.roomId === room.id);
             return (
               <div
                 key={room.id}
@@ -149,41 +144,57 @@ export function ReservationStatusPage() {
                 <TimeLineRoom name={room.name} />
 
                 {/* 타임라인 */}
-                <div
-                  css={css`
-                    flex: 1;
-                    height: 24px;
-                    background: ${colors.white};
-                    border-radius: 6px;
-                    position: relative;
-                    overflow: visible;
-                  `}
-                >
-                  {roomReservations.map((res: Reservation) => {
-                    const isActive = activeReservation === res.id;
-                    return (
-                      <ReservationBar
-                        key={res.id}
-                        res={res}
-                        onClick={() => setActiveReservation(isActive ? null : res.id)}
-                        roomName={room.name}
-                        isActive={isActive}
-                      >
-                        <Tooltip>
-                          <>
-                            <div>
-                              {res.start} ~ {res.end}
-                            </div>
-                            <div>{res.attendees}명</div>
-                            {res.equipment.length > 0 && (
-                              <div>{res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ')}</div>
-                            )}
-                          </>
-                        </Tooltip>
-                      </ReservationBar>
-                    );
-                  })}
-                </div>
+                <TimeLineTrack>
+                  {/* 내 예약 */}
+                  {reservations
+                    .filter((r: Reservation) => r.roomId === room.id)
+                    .map((res: Reservation) => {
+                      const isActive = activeReservation === res.id;
+                      const left = (timeToMinutes(res.start) / TOTAL_MINUTES) * 100;
+                      const width = ((timeToMinutes(res.end) - timeToMinutes(res.start)) / TOTAL_MINUTES) * 100;
+                      return (
+                        <div
+                          css={css`
+                            position: absolute;
+                            left: ${left}%;
+                            width: ${width}%;
+                            height: 100%;
+                          `}
+                        >
+                          <div
+                            role="button"
+                            aria-label={`${room.name} ${res.start}-${res.end} 예약 상세`}
+                            onClick={() => setActiveReservation(isActive ? null : res.id)}
+                            css={css`
+                              width: 100%;
+                              height: 100%;
+                              background: ${colors.blue400};
+                              border-radius: 4px;
+                              opacity: ${isActive ? 1 : 0.75};
+                              cursor: pointer;
+                              transition: opacity 0.15s;
+                              &:hover {
+                                opacity: 1;
+                              }
+                            `}
+                          />
+                          {isActive && (
+                            <Tooltip>
+                              <>
+                                <div>
+                                  {res.start} ~ {res.end}
+                                </div>
+                                <div>{res.attendees}명</div>
+                                {res.equipment.length > 0 && (
+                                  <div>{res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ')}</div>
+                                )}
+                              </>
+                            </Tooltip>
+                          )}
+                        </div>
+                      );
+                    })}
+                </TimeLineTrack>
               </div>
             );
           })}
@@ -468,44 +479,23 @@ function TimeLineRoom({ name }: TimeLineRoomType) {
   );
 }
 
-type ReservationBarType = {
-  res: Reservation;
-  onClick: () => void;
-  roomName: string;
-  isActive: boolean;
+type TimeLineTrackType = {
   children: React.ReactNode;
 };
 
-function ReservationBar({ res, onClick, roomName, isActive, children }: ReservationBarType) {
-  const left = (timeToMinutes(res.start) / TOTAL_MINUTES) * 100;
-  const width = ((timeToMinutes(res.end) - timeToMinutes(res.start)) / TOTAL_MINUTES) * 100;
+function TimeLineTrack({ children }: TimeLineTrackType) {
   return (
     <div
       css={css`
-        position: absolute;
-        left: ${left}%;
-        width: ${width}%;
-        height: 100%;
+        flex: 1;
+        height: 24px;
+        background: ${colors.white};
+        border-radius: 6px;
+        position: relative;
+        overflow: visible;
       `}
     >
-      <div
-        role="button"
-        aria-label={`${roomName} ${res.start}-${res.end} 예약 상세`}
-        onClick={onClick}
-        css={css`
-          width: 100%;
-          height: 100%;
-          background: ${colors.blue400};
-          border-radius: 4px;
-          opacity: ${isActive ? 1 : 0.75};
-          cursor: pointer;
-          transition: opacity 0.15s;
-          &:hover {
-            opacity: 1;
-          }
-        `}
-      />
-      {isActive && children}
+      {children}
     </div>
   );
 }
