@@ -48,17 +48,6 @@ export function ReservationStatusPage() {
     },
   });
 
-  // 시간 헤더
-  const TIME_SLOTS: string[] = [];
-  for (let h = 9; h <= 20; h++) {
-    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
-    if (h < 20) {
-      TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
-    }
-  }
-
-  const HOUR_LABELS = TIME_SLOTS.filter(t => t.endsWith(':00'));
-
   // 메세지 배너
   const location = useLocation();
   const locationState = location.state as { message?: string } | null;
@@ -125,50 +114,7 @@ export function ReservationStatusPage() {
             padding: 16px;
           `}
         >
-          {/* 시간 헤더 */}
-          <div
-            css={css`
-              display: flex;
-              align-items: flex-end;
-              margin-bottom: 8px;
-            `}
-          >
-            <div
-              css={css`
-                width: 80px;
-                flex-shrink: 0;
-                padding-right: 8px;
-              `}
-            />
-            <div
-              css={css`
-                flex: 1;
-                position: relative;
-                height: 18px;
-              `}
-            >
-              {HOUR_LABELS.map(t => {
-                const left = (timeToMinutes(t) / TOTAL_MINUTES) * 100;
-                return (
-                  <Text
-                    key={t}
-                    typography="t7"
-                    fontWeight="regular"
-                    color={colors.grey400}
-                    css={css`
-                      position: absolute;
-                      left: ${left}%;
-                      transform: translateX(-50%);
-                      font-size: 10px;
-                      letter-spacing: -0.3px;
-                    `}
-                  >
-                    {t.slice(0, 2)}
-                  </Text>
-                );
-              })}
-            </div>
-          </div>
+          <TimeLineHeader start={9} end={20} />
 
           {/* 회의실별 타임라인 */}
           {rooms.map((room: { id: string; name: string }, index: number) => {
@@ -183,6 +129,7 @@ export function ReservationStatusPage() {
                   ${index > 0 ? 'margin-top: 4px;' : ''}
                 `}
               >
+                {/* 룸 네임 */}
                 <div
                   css={css`
                     width: 80px;
@@ -202,6 +149,8 @@ export function ReservationStatusPage() {
                     {room.name}
                   </Text>
                 </div>
+
+                {/* 타임라인 */}
                 <div
                   css={css`
                     flex: 1;
@@ -486,6 +435,70 @@ function DatePicker({ minDate, selectedDate, onChange }: DatePickerType) {
           }
         `}
       />
+    </div>
+  );
+}
+
+type TimeLineHeaderType = {
+  start: number;
+  end: number;
+};
+
+function TimeLineHeader({ start, end }: TimeLineHeaderType) {
+  const TOTAL_MINUTES = (end - start) * 60;
+  // 시간 헤더
+  const TIME_SLOTS: string[] = [];
+  for (let h = 9; h <= 20; h++) {
+    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
+    if (h < 20) {
+      TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
+    }
+  }
+
+  const HOUR_LABELS = TIME_SLOTS.filter(t => t.endsWith(':00'));
+  return (
+    <div
+      css={css`
+        display: flex;
+        align-items: flex-end;
+        margin-bottom: 8px;
+      `}
+    >
+      <div
+        css={css`
+          width: 80px;
+          flex-shrink: 0;
+          padding-right: 8px;
+        `}
+      />
+      <div
+        css={css`
+          flex: 1;
+          position: relative;
+          height: 18px;
+        `}
+      >
+        {HOUR_LABELS.map(t => {
+          const left = (timeToMinutes(t) / TOTAL_MINUTES) * 100;
+          return (
+            <Text
+              key={t}
+              typography="t7"
+              fontWeight="regular"
+              color={colors.grey400}
+              css={css`
+                position: absolute;
+                left: ${left}%;
+                transform: translateX(-50%);
+                font-size: 10px;
+                letter-spacing: -0.3px;
+              `}
+            >
+              {t.slice(0, 2)}
+            </Text>
+          );
+        })}
+      </div>
     </div>
   );
 }
