@@ -1,13 +1,12 @@
 import { http } from 'pages/http';
+import type { Room, Reservation, MyReservation } from './ReservationStatusPage/types';
 
 export function getRooms() {
-  return http.get<{ id: string; name: string; floor: number; capacity: number; equipment: string[] }[]>('/api/rooms');
+  return http.get<Room[]>('/api/rooms');
 }
 
 export function getReservations(date: string) {
-  return http.get<{ id: string; roomId: string; date: string; start: string; end: string; attendees: number; equipment: string[] }[]>(
-    `/api/reservations?date=${date}`
-  );
+  return http.get<Reservation[]>(`/api/reservations?date=${date}`);
 }
 
 export function createReservation(data: {
@@ -25,9 +24,7 @@ export function createReservation(data: {
 }
 
 export function getMyReservations() {
-  return http.get<{ id: string; roomId: string; date: string; start: string; end: string; attendees: number; equipment: string[] }[]>(
-    '/api/my-reservations'
-  );
+  return http.get<MyReservation[]>('/api/my-reservations');
 }
 
 export function cancelReservation(id: string) {
