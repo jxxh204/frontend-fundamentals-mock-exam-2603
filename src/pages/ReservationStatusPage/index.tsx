@@ -52,13 +52,6 @@ export function ReservationStatusPage() {
     queryKey: ['myReservations'],
     queryFn: () => getMyReservations(),
   });
-  const cancelMutation = useMutation({
-    mutationFn: (id: string) => cancelReservation(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
-    },
-  });
 
   useEffect(() => {
     if (locationState?.message) {
@@ -139,18 +132,7 @@ export function ReservationStatusPage() {
         <Spacing size={16} />
 
         {myReservationList.length === 0 ? (
-          <div
-            css={css`
-              padding: 40px 0;
-              text-align: center;
-              background: ${colors.grey50};
-              border-radius: 14px;
-            `}
-          >
-            <Text typography="t6" color={colors.grey500}>
-              예약 내역이 없습니다.
-            </Text>
-          </div>
+          <EmptyReservation title="예약 내역이 없습니다." />
         ) : (
           <div
             css={css`
@@ -159,54 +141,39 @@ export function ReservationStatusPage() {
               gap: 10px;
             `}
           >
-            {myReservationList.map((res: MyReservation) => {
-              const getRoomName = (roomId: string) => rooms.find((r: Room) => r.id === roomId)?.name ?? roomId;
+            {myReservationList.map((reservation: MyReservation) => {
+              const currentRoomId = reservation.roomId;
+              const RoomName = rooms.find((room: Room) => room.id === currentRoomId)?.name ?? currentRoomId;
               return (
-                <div
-                  key={res.id}
-                  css={css`
-                    padding: 14px 16px;
-                    border-radius: 14px;
-                    background: ${colors.grey50};
-                    border: 1px solid ${colors.grey200};
-                  `}
+                <MyReservationRoom
+                  roomName={RoomName}
+                  description={`${reservation.date} ${reservation.start}~${reservation.end} · ${
+                    reservation.attendees
+                  }명 · ${reservation.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'}`}
+                  key={reservation.id}
                 >
-                  <ListRow
-                    contents={
-                      <ListRow.Text2Rows
-                        top={getRoomName(res.roomId)}
-                        topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
-                        bottom={`${res.date} ${res.start}~${res.end} · ${res.attendees}명 · ${
-                          res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'
-                        }`}
-                        bottomProps={{ typography: 't7', color: colors.grey600 }}
-                      />
-                    }
-                    right={
-                      <Button
-                        type="danger"
-                        style="weak"
-                        size="small"
-                        onClick={e => {
-                          e.stopPropagation();
-                          if (window.confirm('정말 취소하시겠습니까?')) {
-                            const handleCancel = async (id: string) => {
-                              try {
-                                await cancelMutation.mutateAsync(id);
-                                setMessage({ type: 'success', text: '예약이 취소되었습니다.' });
-                              } catch {
-                                setMessage({ type: 'error', text: '취소에 실패했습니다.' });
-                              }
-                            };
-                            handleCancel(res.id);
-                          }
-                        }}
-                      >
-                        취소
-                      </Button>
-                    }
-                  />
-                </div>
+                  <Button
+                    type="danger"
+                    style="weak"
+                    size="small"
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (window.confirm('정말 취소하시겠습니까?')) {
+                        cancelReservation(reservation.id)
+                          .then(() => {
+                            queryClient.invalidateQueries({ queryKey: ['reservations'] });
+                            queryClient.invalidateQueries({ queryKey: ['myReservations'] });
+                            setMessage({ type: 'success', text: '예약이 취소되었습니다.' });
+                          })
+                          .catch(() => {
+                            setMessage({ type: 'error', text: '취소에 실패했습니다.' });
+                          });
+                      }
+                    }}
+                  >
+                    취소
+                  </Button>
+                </MyReservationRoom>
               );
             })}
           </div>
@@ -272,6 +239,58 @@ function DatePicker({ minDate, selectedDate, onChange }: DatePickerType) {
           }
         `}
       />
+    </div>
+  );
+}
+
+type MyReservationRoom = {
+  roomName: string;
+  description: string;
+  children: React.ReactNode;
+};
+
+function MyReservationRoom({ roomName, description, children }: MyReservationRoom) {
+  return (
+    <div
+      css={css`
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: ${colors.grey50};
+        border: 1px solid ${colors.grey200};
+      `}
+    >
+      <ListRow
+        contents={
+          <ListRow.Text2Rows
+            top={roomName}
+            topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
+            bottom={description}
+            bottomProps={{ typography: 't7', color: colors.grey600 }}
+          />
+        }
+        right={children}
+      />
+    </div>
+  );
+}
+
+type EmptyReservation = {
+  title: string;
+};
+
+function EmptyReservation({ title }: EmptyReservation) {
+  return (
+    <div
+      css={css`
+        padding: 40px 0;
+        text-align: center;
+        background: ${colors.grey50};
+        border-radius: 14px;
+      `}
+    >
+      <Text typography="t6" color={colors.grey500}>
+        {title}
+      </Text>
     </div>
   );
 }
