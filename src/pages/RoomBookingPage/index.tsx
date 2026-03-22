@@ -8,6 +8,7 @@ import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
 import axios from 'axios';
 import { DatePicker } from 'pages/components/DatePicker';
+import { NumberStepper } from 'pages/components/NumberStepper';
 import { Section } from 'pages/ui/Section';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START } from 'pages/constants';
 import { generateTimeSlots } from 'pages/utils';
@@ -39,7 +40,6 @@ export function RoomBookingPage() {
 
   const {
     control,
-    register,
     handleSubmit,
     watch,
     setValue,
@@ -340,7 +340,6 @@ export function RoomBookingPage() {
         </div>
         <Spacing size={14} />
 
-        {/* 참석 인원 + 선호 층 */}
         <div
           css={css`
             display: flex;
@@ -358,33 +357,23 @@ export function RoomBookingPage() {
             <Text as="label" typography="t7" fontWeight="medium" color={colors.grey600}>
               참석 인원
             </Text>
-            <input
-              type="number"
-              min={1}
-              {...register('attendees', {
-                valueAsNumber: true,
+            <Controller
+              name="attendees"
+              control={control}
+              rules={{
                 min: { value: 1, message: '참석 인원은 1명 이상이어야 합니다.' },
-                onChange: () => resetSelection(),
-              })}
-              aria-label="참석 인원"
-              css={css`
-                box-sizing: border-box;
-                font-size: 16px;
-                font-weight: 500;
-                line-height: 1.5;
-                height: 48px;
-                background-color: ${colors.grey50};
-                border-radius: 12px;
-                color: ${colors.grey800};
-                width: 100%;
-                border: 1px solid ${colors.grey200};
-                padding: 0 16px;
-                outline: none;
-                transition: border-color 0.15s;
-                &:focus {
-                  border-color: ${colors.blue500};
-                }
-              `}
+              }}
+              render={({ field }) => (
+                <NumberStepper
+                  value={field.value}
+                  onChange={(v: number) => {
+                    field.onChange(v);
+                    resetSelection();
+                  }}
+                  min={1}
+                  aria-label="참석 인원"
+                />
+              )}
             />
           </div>
           <div
