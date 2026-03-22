@@ -5,7 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text, ListRow } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, getMyReservations, cancelReservation } from 'pages/remotes';
+import { formatDate } from './utils';
 
+// 회의실별 타임라인 > 툴팁, 내 예약
 const EQUIPMENT_LABELS: Record<string, string> = {
   tv: 'TV',
   whiteboard: '화이트보드',
@@ -26,16 +28,9 @@ export function ReservationStatusPage() {
   const navigate = useNavigate(); // 예약하기 버튼
   const queryClient = useQueryClient();
 
-  // 날짜 선택
-  function formatDate(date: Date): string {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
   const [date, setDate] = useState(formatDate(new Date()));
 
-  // 회의실 별 타임라인
+  // 회의실 별 타임라인, 내 예약
   const [activeReservation, setActiveReservation] = useState<string | null>(null);
   const { data: reservations = [] } = useQuery(['reservations', date], () => getReservations(date), {
     enabled: !!date,
@@ -105,39 +100,7 @@ export function ReservationStatusPage() {
           날짜 선택
         </Text>
         <Spacing size={16} />
-        <div
-          css={css`
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-          `}
-        >
-          <input
-            type="date"
-            value={date}
-            min={formatDate(new Date())}
-            onChange={e => setDate(e.target.value)}
-            aria-label="날짜"
-            css={css`
-              box-sizing: border-box;
-              font-size: 16px;
-              font-weight: 500;
-              line-height: 1.5;
-              height: 48px;
-              background-color: ${colors.grey50};
-              border-radius: 12px;
-              color: ${colors.grey800};
-              width: 100%;
-              border: 1px solid ${colors.grey200};
-              padding: 0 16px;
-              outline: none;
-              transition: border-color 0.15s;
-              &:focus {
-                border-color: ${colors.blue500};
-              }
-            `}
-          />
-        </div>
+        <DatePicker selectedDate={date} minDate={formatDate(new Date())} onChange={e => setDate(e.target.value)} />
       </div>
 
       <Spacing size={24} />
@@ -479,6 +442,50 @@ export function ReservationStatusPage() {
         </Button>
       </div>
       <Spacing size={24} />
+    </div>
+  );
+}
+
+type DatePickerType = {
+  minDate: string;
+  selectedDate: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+};
+
+function DatePicker({ minDate, selectedDate, onChange }: DatePickerType) {
+  return (
+    <div
+      css={css`
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      `}
+    >
+      <input
+        type="date"
+        value={selectedDate}
+        min={minDate}
+        onChange={onChange}
+        aria-label="날짜"
+        css={css`
+          box-sizing: border-box;
+          font-size: 16px;
+          font-weight: 500;
+          line-height: 1.5;
+          height: 48px;
+          background-color: ${colors.grey50};
+          border-radius: 12px;
+          color: ${colors.grey800};
+          width: 100%;
+          border: 1px solid ${colors.grey200};
+          padding: 0 16px;
+          outline: none;
+          transition: border-color 0.15s;
+          &:focus {
+            border-color: ${colors.blue500};
+          }
+        `}
+      />
     </div>
   );
 }
