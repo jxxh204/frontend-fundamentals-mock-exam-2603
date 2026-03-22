@@ -1,19 +1,19 @@
 import { css } from '@emotion/react';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
-import { Top, Spacing, Border, Button, Text, Select, ListRow } from '_tosslib/components';
+import { Top, Spacing, Border, Button, Text, Select } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
-import { getRooms, getReservations, createReservation } from 'pages/remotes';
+import { getRooms, createReservation } from 'pages/remotes';
 import axios from 'axios';
 import { DatePicker } from 'pages/components/DatePicker';
 import { NumberStepper } from 'pages/components/NumberStepper';
 import { ChipGroup } from 'pages/components/ChipGroup';
 import { Section } from 'pages/ui/Section';
-import { EmptyRoom } from 'pages/ui/EmptyReservation';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START } from 'pages/constants';
-import { generateTimeSlots, 수용가능, 장비충족, 선호층일치, 시간충돌없음, 층별이름순 } from 'pages/utils';
+import { generateTimeSlots } from 'pages/utils';
+import { AvailableRoomList } from './AvailableRoomList';
 
 function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -81,26 +81,9 @@ export function RoomBookingPage() {
   };
 
   const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
-  const { data: reservations = [] } = useQuery({
-    queryKey: ['reservations', date],
-    queryFn: () => getReservations(date),
-    enabled: !!date,
-  });
 
   const hasTimeInputs = startTime !== '' && endTime !== '';
   const isFilterComplete = hasTimeInputs && !errors.endTime && !errors.attendees;
-
-  const availableRooms = isFilterComplete
-    ? rooms
-        .filter(
-          (room: { id: string; capacity: number; equipment: string[]; floor: number; name: string }) =>
-            수용가능(room, attendees) &&
-            장비충족(room, equipment) &&
-            선호층일치(room, preferredFloor) &&
-            시간충돌없음(room, reservations, { date, startTime, endTime })
-        )
-        .sort(층별이름순)
-    : [];
 
   const handleError = (message: string) => {
     setErrorMessage(message);
@@ -431,67 +414,22 @@ export function RoomBookingPage() {
 
       {/* 예약 가능 회의실 목록 */}
       {isFilterComplete && (
-        <div
-          css={css`
-            padding: 0 24px;
-          `}
-        >
-          <div
-            css={css`
-              display: flex;
-              align-items: baseline;
-              gap: 6px;
-            `}
-          >
-            <Text typography="t5" fontWeight="bold" color={colors.grey900}>
-              예약 가능 회의실
-            </Text>
-            <Text typography="t7" fontWeight="medium" color={colors.grey500}>
-              {availableRooms.length}개
-            </Text>
-          </div>
-          <Spacing size={16} />
-
-          {availableRooms.length === 0 ? (
-            <EmptyRoom title="조건에 맞는 회의실이 없습니다." />
-          ) : (
+        <Section>
+          <Suspense fallback={<div>로딩 중...</div>}>
             <Controller
               name="selectedRoomId"
               control={control}
               render={({ field }) => (
-                <div
-                  css={css`
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                  `}
-                >
-                  {availableRooms.map(
-                    (room: { id: string; name: string; floor: number; capacity: number; equipment: string[] }) => {
-                      const isSelected = field.value === room.id;
-                      return (
-                        <ReservationRoom
-                          key={room.id}
-                          roomName={room.name}
-                          description={`${room.floor}층 · ${room.capacity}명 · ${room.equipment
-                            .map((e: string) => EQUIPMENT_LABELS[e])
-                            .join(', ')}`}
-                          selected={isSelected}
-                          onClick={() => field.onChange(room.id)}
-                        >
-                          {isSelected && (
-                            <Text typography="t7" fontWeight="bold" color={colors.blue500}>
-                              선택됨
-                            </Text>
-                          )}
-                        </ReservationRoom>
-                      );
-                    }
-                  )}
-                </div>
+                <AvailableRoomList
+                  title="예약 가능 회의실"
+                  filter={{ date, startTime, endTime, attendees, equipment, preferredFloor }}
+                  selectedRoomId={field.value}
+                  onSelect={field.onChange}
+                />
+                //TODO :   룸 컴포넌트가 보이도록 개선 필요
               )}
             />
-          )}
+          </Suspense>
 
           <Spacing size={16} />
           <Button
@@ -514,56 +452,10 @@ export function RoomBookingPage() {
           >
             {createMutation.isPending ? '예약 중...' : '확정'}
           </Button>
-        </div>
+        </Section>
       )}
 
       <Spacing size={24} />
-    </div>
-  );
-}
-
-type ReservationRoomProps = {
-  roomName: string;
-  description: string;
-  selected?: boolean;
-  onClick?: () => void;
-  children?: React.ReactNode;
-};
-
-function ReservationRoom({ roomName, description, selected, onClick, children }: ReservationRoomProps) {
-  return (
-    <div
-      role={onClick ? 'button' : undefined}
-      aria-pressed={selected}
-      aria-label={roomName}
-      onClick={onClick}
-      css={css`
-        padding: 14px 16px;
-        border-radius: 14px;
-        background: ${selected ? colors.blue50 : colors.grey50};
-        border: ${selected ? `2px solid ${colors.blue500}` : `1px solid ${colors.grey200}`};
-        ${onClick
-          ? `
-          cursor: pointer;
-          transition: all 0.15s;
-          &:hover {
-            border-color: ${selected ? colors.blue500 : colors.grey300};
-          }
-        `
-          : ''}
-      `}
-    >
-      <ListRow
-        contents={
-          <ListRow.Text2Rows
-            top={roomName}
-            topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
-            bottom={description}
-            bottomProps={{ typography: 't7', color: colors.grey600 }}
-          />
-        }
-        right={children}
-      />
     </div>
   );
 }
