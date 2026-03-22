@@ -69,7 +69,7 @@ export function ReservationStatusPage() {
   );
   // 내 예약
   const { data: myReservationList = [] } = useQuery({
-    queryKey: ['myReservations', date],
+    queryKey: ['myReservations'],
     queryFn: () => getMyReservations(),
   });
   const cancelMutation = useMutation({
