@@ -499,44 +499,21 @@ export function RoomBookingPage() {
                     (room: { id: string; name: string; floor: number; capacity: number; equipment: string[] }) => {
                       const isSelected = field.value === room.id;
                       return (
-                        <div
+                        <ReservationRoom
                           key={room.id}
+                          roomName={room.name}
+                          description={`${room.floor}층 · ${room.capacity}명 · ${room.equipment
+                            .map((e: string) => EQUIPMENT_LABELS[e])
+                            .join(', ')}`}
+                          selected={isSelected}
                           onClick={() => field.onChange(room.id)}
-                          role="button"
-                          aria-pressed={isSelected}
-                          aria-label={room.name}
-                          css={css`
-                            cursor: pointer;
-                            padding: 14px 16px;
-                            border-radius: 14px;
-                            border: 2px solid ${isSelected ? colors.blue500 : colors.grey200};
-                            background: ${isSelected ? colors.blue50 : colors.white};
-                            transition: all 0.15s;
-                            &:hover {
-                              border-color: ${isSelected ? colors.blue500 : colors.grey300};
-                            }
-                          `}
                         >
-                          <ListRow
-                            contents={
-                              <ListRow.Text2Rows
-                                top={room.name}
-                                topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
-                                bottom={`${room.floor}층 · ${room.capacity}명 · ${room.equipment
-                                  .map((e: string) => EQUIPMENT_LABELS[e])
-                                  .join(', ')}`}
-                                bottomProps={{ typography: 't7', color: colors.grey600 }}
-                              />
-                            }
-                            right={
-                              isSelected ? (
-                                <Text typography="t7" fontWeight="bold" color={colors.blue500}>
-                                  선택됨
-                                </Text>
-                              ) : undefined
-                            }
-                          />
-                        </div>
+                          {isSelected && (
+                            <Text typography="t7" fontWeight="bold" color={colors.blue500}>
+                              선택됨
+                            </Text>
+                          )}
+                        </ReservationRoom>
                       );
                     }
                   )}
@@ -553,6 +530,52 @@ export function RoomBookingPage() {
       )}
 
       <Spacing size={24} />
+    </div>
+  );
+}
+
+type ReservationRoomProps = {
+  roomName: string;
+  description: string;
+  selected?: boolean;
+  onClick?: () => void;
+  children?: React.ReactNode;
+};
+
+function ReservationRoom({ roomName, description, selected, onClick, children }: ReservationRoomProps) {
+  return (
+    <div
+      role={onClick ? 'button' : undefined}
+      aria-pressed={selected}
+      aria-label={roomName}
+      onClick={onClick}
+      css={css`
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: ${selected ? colors.blue50 : colors.grey50};
+        border: ${selected ? `2px solid ${colors.blue500}` : `1px solid ${colors.grey200}`};
+        ${onClick
+          ? `
+          cursor: pointer;
+          transition: all 0.15s;
+          &:hover {
+            border-color: ${selected ? colors.blue500 : colors.grey300};
+          }
+        `
+          : ''}
+      `}
+    >
+      <ListRow
+        contents={
+          <ListRow.Text2Rows
+            top={roomName}
+            topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
+            bottom={description}
+            bottomProps={{ typography: 't7', color: colors.grey600 }}
+          />
+        }
+        right={children}
+      />
     </div>
   );
 }
