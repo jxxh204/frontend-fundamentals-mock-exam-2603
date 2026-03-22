@@ -11,6 +11,7 @@ import { Section } from '../ui/Section';
 import { ReservationTimeline } from './ReservationTimeline';
 import { DatePicker } from 'pages/components/DatePicker';
 import { EQUIPMENT_LABELS } from 'pages/constants';
+import { EmptyRoom } from 'pages/ui/EmptyReservation';
 
 type Room = {
   id: string;
@@ -127,7 +128,7 @@ export function ReservationStatusPage() {
         <Spacing size={16} />
 
         {myReservationList.length === 0 ? (
-          <EmptyReservation title="예약 내역이 없습니다." />
+          <EmptyRoom title="예약 내역이 없습니다." />
         ) : (
           <div
             css={css`
@@ -221,27 +222,6 @@ function MyReservationRoom({ roomName, description, children }: MyReservationRoo
         }
         right={children}
       />
-    </div>
-  );
-}
-
-type EmptyReservation = {
-  title: string;
-};
-
-function EmptyReservation({ title }: EmptyReservation) {
-  return (
-    <div
-      css={css`
-        padding: 40px 0;
-        text-align: center;
-        background: ${colors.grey50};
-        border-radius: 14px;
-      `}
-    >
-      <Text typography="t6" color={colors.grey500}>
-        {title}
-      </Text>
     </div>
   );
 }

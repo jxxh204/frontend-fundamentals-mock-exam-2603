@@ -11,6 +11,7 @@ import { DatePicker } from 'pages/components/DatePicker';
 import { NumberStepper } from 'pages/components/NumberStepper';
 import { ChipGroup } from 'pages/components/ChipGroup';
 import { Section } from 'pages/ui/Section';
+import { EmptyRoom } from 'pages/ui/EmptyReservation';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START } from 'pages/constants';
 import { generateTimeSlots } from 'pages/utils';
 
@@ -481,18 +482,7 @@ export function RoomBookingPage() {
           <Spacing size={16} />
 
           {availableRooms.length === 0 ? (
-            <div
-              css={css`
-                padding: 40px 0;
-                text-align: center;
-                background: ${colors.grey50};
-                border-radius: 14px;
-              `}
-            >
-              <Text typography="t6" color={colors.grey500}>
-                조건에 맞는 회의실이 없습니다.
-              </Text>
-            </div>
+            <EmptyRoom title="조건에 맞는 회의실이 없습니다." />
           ) : (
             <Controller
               name="selectedRoomId"
