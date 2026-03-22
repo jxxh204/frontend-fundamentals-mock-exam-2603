@@ -61,19 +61,21 @@ export function RoomBookingPage() {
     setSearchParams(params, { replace: true });
   }, [date, startTime, endTime, attendees, equipment, preferredFloor, setSearchParams]);
 
-  const { data: rooms = [] } = useQuery(['rooms'], getRooms);
-  const { data: reservations = [] } = useQuery(['reservations', date], () => getReservations(date), { enabled: !!date });
+  const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
+  const { data: reservations = [] } = useQuery({
+    queryKey: ['reservations', date],
+    queryFn: () => getReservations(date),
+    enabled: !!date,
+  });
 
-  const createMutation = useMutation(
-    (data: { roomId: string; date: string; start: string; end: string; attendees: number; equipment: string[] }) =>
+  const createMutation = useMutation({
+    mutationFn: (data: { roomId: string; date: string; start: string; end: string; attendees: number; equipment: string[] }) =>
       createReservation(data),
-    {
-      onSuccess: (_data, variables) => {
-        queryClient.invalidateQueries(['reservations', variables.date]);
-        queryClient.invalidateQueries(['myReservations']);
-      },
-    }
-  );
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
+    },
+  });
 
   // 필터 변경 시 선택 초기화
   const handleFilterChange = () => {
@@ -390,8 +392,8 @@ export function RoomBookingPage() {
           )}
 
           <Spacing size={16} />
-          <Button display="full" onClick={handleBook} disabled={createMutation.isLoading}>
-            {createMutation.isLoading ? '예약 중...' : '확정'}
+          <Button display="full" onClick={handleBook} disabled={createMutation.isPending}>
+            {createMutation.isPending ? '예약 중...' : '확정'}
           </Button>
         </div>
       )}

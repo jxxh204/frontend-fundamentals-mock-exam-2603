@@ -3,7 +3,6 @@ import { css, Global } from '@emotion/react';
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GlobalPortal } from './GlobalPortal';
-
 import '_tosslib/sass/app.scss';
 import { PageLayout } from 'pages/PageLayout';
 import { Routes } from 'pages/Routes';

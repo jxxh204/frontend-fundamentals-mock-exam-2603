@@ -1,7 +1,7 @@
 import { css } from '@emotion/react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text, ListRow } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, getMyReservations, cancelReservation } from 'pages/remotes';
@@ -51,21 +51,14 @@ export function ReservationStatusPage() {
   const [date, setDate] = useState(formatDate(new Date()));
 
   // 회의실 별 타임라인, 내 예약
-  const { data: rooms = [] } = useQuery(['rooms'], getRooms);
+  const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
 
   // 회의실 별 타임라인
   const [activeReservation, setActiveReservation] = useState<string | null>(null);
-  const { data: reservations = [] } = useQuery(['reservations', date], () => getReservations(date), {
+  const { data: reservations = [] } = useQuery({
+    queryKey: ['reservations', date],
+    queryFn: () => getReservations(date),
     enabled: !!date,
-  });
-
-  // 내 예약
-  const { data: myReservationList = [] } = useQuery(['myReservations'], getMyReservations);
-  const cancelMutation = useMutation((id: string) => cancelReservation(id), {
-    onSuccess: () => {
-      queryClient.invalidateQueries(['reservations']);
-      queryClient.invalidateQueries(['myReservations']);
-    },
   });
 
   // 메세지 배너
@@ -74,6 +67,18 @@ export function ReservationStatusPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     locationState?.message ? { type: 'success', text: locationState.message } : null
   );
+  // 내 예약
+  const { data: myReservationList = [] } = useQuery({
+    queryKey: ['myReservations', date],
+    queryFn: () => getMyReservations(),
+  });
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => cancelReservation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
+    },
+  });
 
   useEffect(() => {
     if (locationState?.message) {
