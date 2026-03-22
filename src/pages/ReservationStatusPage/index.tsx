@@ -6,6 +6,25 @@ import { Top, Spacing, Border, Button, Text, ListRow } from '_tosslib/components
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, getMyReservations, cancelReservation } from 'pages/remotes';
 import { formatDate } from './utils';
+import { Tooltip } from './ui/Tooltip';
+
+type Room = {
+  id: string;
+  name: string;
+};
+
+type Reservation = {
+  id: string;
+  roomId: string;
+  start: string;
+  end: string;
+  attendees: number;
+  equipment: string[];
+};
+
+type MyReservation = Reservation & {
+  date: string;
+};
 
 // 회의실별 타임라인 > 툴팁, 내 예약
 const EQUIPMENT_LABELS: Record<string, string> = {
@@ -117,8 +136,8 @@ export function ReservationStatusPage() {
           <TimeLineHeader start={9} end={20} />
 
           {/* 회의실별 타임라인 */}
-          {rooms.map((room: { id: string; name: string }, index: number) => {
-            const roomReservations = reservations.filter((r: { roomId: string }) => r.roomId === room.id);
+          {rooms.map((room: Room, index: number) => {
+            const roomReservations = reservations.filter((r: Reservation) => r.roomId === room.id);
             return (
               <div
                 key={room.id}
@@ -143,71 +162,30 @@ export function ReservationStatusPage() {
                     overflow: visible;
                   `}
                 >
-                  {roomReservations.map(
-                    (res: { id: string; start: string; end: string; attendees: number; equipment: string[] }) => {
-                      const left = (timeToMinutes(res.start) / TOTAL_MINUTES) * 100;
-                      const width = ((timeToMinutes(res.end) - timeToMinutes(res.start)) / TOTAL_MINUTES) * 100;
-                      const isActive = activeReservation === res.id;
-                      return (
-                        <div
-                          key={res.id}
-                          css={css`
-                            position: absolute;
-                            left: ${left}%;
-                            width: ${width}%;
-                            height: 100%;
-                          `}
-                        >
-                          <div
-                            role="button"
-                            aria-label={`${room.name} ${res.start}-${res.end} 예약 상세`}
-                            onClick={() => setActiveReservation(isActive ? null : res.id)}
-                            css={css`
-                              width: 100%;
-                              height: 100%;
-                              background: ${colors.blue400};
-                              border-radius: 4px;
-                              opacity: ${isActive ? 1 : 0.75};
-                              cursor: pointer;
-                              transition: opacity 0.15s;
-                              &:hover {
-                                opacity: 1;
-                              }
-                            `}
-                          />
-                          {isActive && (
-                            <div
-                              role="tooltip"
-                              css={css`
-                                position: absolute;
-                                top: 100%;
-                                left: 50%;
-                                transform: translateX(-50%);
-                                margin-top: 6px;
-                                background: ${colors.grey900};
-                                color: ${colors.white};
-                                padding: 8px 12px;
-                                border-radius: 8px;
-                                font-size: 12px;
-                                white-space: nowrap;
-                                z-index: 10;
-                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-                                line-height: 1.6;
-                              `}
-                            >
-                              <div>
-                                {res.start} ~ {res.end}
-                              </div>
-                              <div>{res.attendees}명</div>
-                              {res.equipment.length > 0 && (
-                                <div>{res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ')}</div>
-                              )}
+                  {roomReservations.map((res: Reservation) => {
+                    const isActive = activeReservation === res.id;
+                    return (
+                      <ReservationBar
+                        key={res.id}
+                        res={res}
+                        onClick={() => setActiveReservation(isActive ? null : res.id)}
+                        roomName={room.name}
+                        isActive={isActive}
+                      >
+                        <Tooltip>
+                          <>
+                            <div>
+                              {res.start} ~ {res.end}
                             </div>
-                          )}
-                        </div>
-                      );
-                    }
-                  )}
+                            <div>{res.attendees}명</div>
+                            {res.equipment.length > 0 && (
+                              <div>{res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ')}</div>
+                            )}
+                          </>
+                        </Tooltip>
+                      </ReservationBar>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -293,67 +271,56 @@ export function ReservationStatusPage() {
               gap: 10px;
             `}
           >
-            {myReservationList.map(
-              (res: {
-                id: string;
-                roomId: string;
-                date: string;
-                start: string;
-                end: string;
-                attendees: number;
-                equipment: string[];
-              }) => {
-                const getRoomName = (roomId: string) =>
-                  rooms.find((r: { id: string; name: string }) => r.id === roomId)?.name ?? roomId;
-                return (
-                  <div
-                    key={res.id}
-                    css={css`
-                      padding: 14px 16px;
-                      border-radius: 14px;
-                      background: ${colors.grey50};
-                      border: 1px solid ${colors.grey200};
-                    `}
-                  >
-                    <ListRow
-                      contents={
-                        <ListRow.Text2Rows
-                          top={getRoomName(res.roomId)}
-                          topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
-                          bottom={`${res.date} ${res.start}~${res.end} · ${res.attendees}명 · ${
-                            res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'
-                          }`}
-                          bottomProps={{ typography: 't7', color: colors.grey600 }}
-                        />
-                      }
-                      right={
-                        <Button
-                          type="danger"
-                          style="weak"
-                          size="small"
-                          onClick={e => {
-                            e.stopPropagation();
-                            if (window.confirm('정말 취소하시겠습니까?')) {
-                              const handleCancel = async (id: string) => {
-                                try {
-                                  await cancelMutation.mutateAsync(id);
-                                  setMessage({ type: 'success', text: '예약이 취소되었습니다.' });
-                                } catch {
-                                  setMessage({ type: 'error', text: '취소에 실패했습니다.' });
-                                }
-                              };
-                              handleCancel(res.id);
-                            }
-                          }}
-                        >
-                          취소
-                        </Button>
-                      }
-                    />
-                  </div>
-                );
-              }
-            )}
+            {myReservationList.map((res: MyReservation) => {
+              const getRoomName = (roomId: string) => rooms.find((r: Room) => r.id === roomId)?.name ?? roomId;
+              return (
+                <div
+                  key={res.id}
+                  css={css`
+                    padding: 14px 16px;
+                    border-radius: 14px;
+                    background: ${colors.grey50};
+                    border: 1px solid ${colors.grey200};
+                  `}
+                >
+                  <ListRow
+                    contents={
+                      <ListRow.Text2Rows
+                        top={getRoomName(res.roomId)}
+                        topProps={{ typography: 't6', fontWeight: 'bold', color: colors.grey900 }}
+                        bottom={`${res.date} ${res.start}~${res.end} · ${res.attendees}명 · ${
+                          res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'
+                        }`}
+                        bottomProps={{ typography: 't7', color: colors.grey600 }}
+                      />
+                    }
+                    right={
+                      <Button
+                        type="danger"
+                        style="weak"
+                        size="small"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (window.confirm('정말 취소하시겠습니까?')) {
+                            const handleCancel = async (id: string) => {
+                              try {
+                                await cancelMutation.mutateAsync(id);
+                                setMessage({ type: 'success', text: '예약이 취소되었습니다.' });
+                              } catch {
+                                setMessage({ type: 'error', text: '취소에 실패했습니다.' });
+                              }
+                            };
+                            handleCancel(res.id);
+                          }
+                        }}
+                      >
+                        취소
+                      </Button>
+                    }
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -508,6 +475,48 @@ function TimeLineRoom({ name }: TimeLineRoomType) {
       >
         {name}
       </Text>
+    </div>
+  );
+}
+
+type ReservationBarType = {
+  res: Reservation;
+  onClick: () => void;
+  roomName: string;
+  isActive: boolean;
+  children: React.ReactNode;
+};
+
+function ReservationBar({ res, onClick, roomName, isActive, children }: ReservationBarType) {
+  const left = (timeToMinutes(res.start) / TOTAL_MINUTES) * 100;
+  const width = ((timeToMinutes(res.end) - timeToMinutes(res.start)) / TOTAL_MINUTES) * 100;
+  return (
+    <div
+      css={css`
+        position: absolute;
+        left: ${left}%;
+        width: ${width}%;
+        height: 100%;
+      `}
+    >
+      <div
+        role="button"
+        aria-label={`${roomName} ${res.start}-${res.end} 예약 상세`}
+        onClick={onClick}
+        css={css`
+          width: 100%;
+          height: 100%;
+          background: ${colors.blue400};
+          border-radius: 4px;
+          opacity: ${isActive ? 1 : 0.75};
+          cursor: pointer;
+          transition: opacity 0.15s;
+          &:hover {
+            opacity: 1;
+          }
+        `}
+      />
+      {isActive && children}
     </div>
   );
 }
