@@ -54,18 +54,16 @@ export function ReservationTimeline({ date }: { date: string }) {
               .filter((r: Reservation) => r.roomId === room.id)
               .map((res: Reservation) => {
                 const isActive = activeReservation === res.id;
-                const left = (timeToMinutes(TIMELINE_START, res.start) / TOTAL_MINUTES) * 100;
-                const width =
-                  ((timeToMinutes(TIMELINE_START, res.end) - timeToMinutes(TIMELINE_START, res.start)) /
-                    TOTAL_MINUTES) *
-                  100;
+
                 return (
                   <div
                     key={res.id}
                     css={css`
                       position: absolute;
-                      left: ${left}%;
-                      width: ${width}%;
+                      left: ${(timeToMinutes(TIMELINE_START, res.start) / TOTAL_MINUTES) * 100}%;
+                      width: ${((timeToMinutes(TIMELINE_START, res.end) - timeToMinutes(TIMELINE_START, res.start)) /
+                        TOTAL_MINUTES) *
+                      100}%;
                       height: 100%;
                     `}
                   >
