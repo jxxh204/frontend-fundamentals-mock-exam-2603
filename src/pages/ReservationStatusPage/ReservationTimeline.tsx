@@ -4,20 +4,10 @@ import { useSuspenseQueries } from '@tanstack/react-query';
 import { Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations } from 'pages/remotes';
-import { timeToMinutes } from './utils';
-import { Tooltip } from './ui/Tooltip';
+import { generateTimeSlots, timeToMinutes } from '../utils';
+import { Tooltip } from '../ui/Tooltip';
 import type { Room, Reservation } from './types';
-
-const EQUIPMENT_LABELS: Record<string, string> = {
-  tv: 'TV',
-  whiteboard: '화이트보드',
-  video: '화상장비',
-  speaker: '스피커',
-};
-
-const TIMELINE_START = 9;
-const TIMELINE_END = 20;
-const TOTAL_MINUTES = (TIMELINE_END - TIMELINE_START) * 60;
+import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START, TOTAL_MINUTES } from 'pages/constants';
 
 export function ReservationTimeline({ date }: { date: string }) {
   const [{ data: rooms }, { data: reservations }] = useSuspenseQueries({
@@ -109,15 +99,7 @@ export function ReservationTimeline({ date }: { date: string }) {
 
 function TimeLineHeader({ start, end }: { start: number; end: number }) {
   const TOTAL_MINUTES = (end - start) * 60;
-  const TIME_SLOTS: string[] = [];
-  for (let h = 9; h <= 20; h++) {
-    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
-    if (h < 20) {
-      TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
-    }
-  }
-
-  const HOUR_LABELS = TIME_SLOTS.filter(t => t.endsWith(':00'));
+  const HOUR_LABELS = generateTimeSlots(start, end).filter(t => t.endsWith(':00'));
   return (
     <div
       css={css`

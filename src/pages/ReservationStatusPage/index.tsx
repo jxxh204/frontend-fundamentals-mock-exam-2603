@@ -1,15 +1,16 @@
 import { css } from '@emotion/react';
 import { Suspense, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text, ListRow } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getMyReservations, cancelReservation } from 'pages/remotes';
-import { formatDate } from './utils';
-import { Banner } from './ui/Banner';
-import { Section } from './ui/Section';
+import { formatDate } from '../utils';
+import { Banner } from '../ui/Banner';
+import { Section } from '../ui/Section';
 import { ReservationTimeline } from './ReservationTimeline';
 import { DatePicker } from 'pages/components/DatePicker';
+import { EQUIPMENT_LABELS } from 'pages/constants';
 
 type Room = {
   id: string;
@@ -24,13 +25,6 @@ type MyReservation = {
   end: string;
   attendees: number;
   equipment: string[];
-};
-
-const EQUIPMENT_LABELS: Record<string, string> = {
-  tv: 'TV',
-  whiteboard: '화이트보드',
-  video: '화상장비',
-  speaker: '스피커',
 };
 
 export function ReservationStatusPage() {
