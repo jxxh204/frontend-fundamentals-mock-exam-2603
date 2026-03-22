@@ -1,5 +1,5 @@
 import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
@@ -13,7 +13,7 @@ import { ChipGroup } from 'pages/components/ChipGroup';
 import { Section } from 'pages/ui/Section';
 import { EmptyRoom } from 'pages/ui/EmptyReservation';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START } from 'pages/constants';
-import { generateTimeSlots } from 'pages/utils';
+import { generateTimeSlots, 수용가능, 장비충족, 선호층일치, 시간충돌없음, 층별이름순 } from 'pages/utils';
 
 function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -42,6 +42,7 @@ export function RoomBookingPage() {
     control,
     handleSubmit,
     watch,
+    getValues,
     setValue,
     trigger,
     formState: { errors },
@@ -67,13 +68,8 @@ export function RoomBookingPage() {
     'preferredFloor',
   ]);
 
-  const resetSelection = () => {
-    setValue('selectedRoomId', null);
-    setErrorMessage(null);
-  };
-
-  // URL 쿼리 파라미터 동기화
-  useEffect(() => {
+  const syncToUrl = () => {
+    const { date, startTime, endTime, attendees, equipment, preferredFloor } = getValues();
     const params: Record<string, string> = {};
     if (date) params.date = date;
     if (startTime) params.startTime = startTime;
@@ -82,7 +78,7 @@ export function RoomBookingPage() {
     if (equipment.length > 0) params.equipment = equipment.join(',');
     if (preferredFloor !== null) params.floor = String(preferredFloor);
     setSearchParams(params, { replace: true });
-  }, [date, startTime, endTime, attendees, equipment, preferredFloor, setSearchParams]);
+  };
 
   const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
   const { data: reservations = [] } = useQuery({
@@ -90,6 +86,20 @@ export function RoomBookingPage() {
     queryFn: () => getReservations(date),
     enabled: !!date,
   });
+
+  const hasTimeInputs = startTime !== '' && endTime !== '';
+  const isFilterComplete = hasTimeInputs && !errors.endTime && !errors.attendees;
+
+  const availableRooms = isFilterComplete
+    ? rooms
+        .filter((room: { id: string; capacity: number; equipment: string[]; floor: number; name: string }) =>
+          수용가능(room, attendees) &&
+          장비충족(room, equipment) &&
+          선호층일치(room, preferredFloor) &&
+          시간충돌없음(room, reservations, { date, startTime, endTime })
+        )
+        .sort(층별이름순)
+    : [];
 
   const createMutation = useMutation({
     mutationFn: (data: {
@@ -105,28 +115,6 @@ export function RoomBookingPage() {
       queryClient.invalidateQueries({ queryKey: ['myReservations'] });
     },
   });
-
-  const hasTimeInputs = startTime !== '' && endTime !== '';
-  const isFilterComplete = hasTimeInputs && !errors.endTime && !errors.attendees;
-
-  const availableRooms = isFilterComplete
-    ? rooms
-        .filter((room: { id: string; capacity: number; equipment: string[]; floor: number }) => {
-          if (room.capacity < attendees) return false;
-          if (!equipment.every(eq => room.equipment.includes(eq))) return false;
-          if (preferredFloor !== null && room.floor !== preferredFloor) return false;
-          const hasConflict = reservations.some(
-            (r: { roomId: string; date: string; start: string; end: string }) =>
-              r.roomId === room.id && r.date === date && r.start < endTime && r.end > startTime
-          );
-          if (hasConflict) return false;
-          return true;
-        })
-        .sort((a: { floor: number; name: string }, b: { floor: number; name: string }) => {
-          if (a.floor !== b.floor) return a.floor - b.floor;
-          return a.name.localeCompare(b.name);
-        })
-    : [];
 
   const onSubmit: SubmitHandler<BookingFormValues> = async data => {
     if (!data.selectedRoomId) {
@@ -161,6 +149,12 @@ export function RoomBookingPage() {
       setErrorMessage(serverMessage);
       setValue('selectedRoomId', null);
     }
+  };
+
+  const resetSelection = () => {
+    setValue('selectedRoomId', null);
+    setErrorMessage(null);
+    syncToUrl();
   };
 
   return (
