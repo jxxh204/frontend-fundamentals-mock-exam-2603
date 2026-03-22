@@ -92,64 +92,41 @@ export function RoomBookingPage() {
 
   const availableRooms = isFilterComplete
     ? rooms
-        .filter((room: { id: string; capacity: number; equipment: string[]; floor: number; name: string }) =>
-          수용가능(room, attendees) &&
-          장비충족(room, equipment) &&
-          선호층일치(room, preferredFloor) &&
-          시간충돌없음(room, reservations, { date, startTime, endTime })
+        .filter(
+          (room: { id: string; capacity: number; equipment: string[]; floor: number; name: string }) =>
+            수용가능(room, attendees) &&
+            장비충족(room, equipment) &&
+            선호층일치(room, preferredFloor) &&
+            시간충돌없음(room, reservations, { date, startTime, endTime })
         )
         .sort(층별이름순)
     : [];
 
+  const handleError = (message: string) => {
+    setErrorMessage(message);
+    setValue('selectedRoomId', null);
+  };
+
   const createMutation = useMutation({
-    mutationFn: (data: {
-      roomId: string;
-      date: string;
-      start: string;
-      end: string;
-      attendees: number;
-      equipment: string[];
-    }) => createReservation(data),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
-      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
-    },
-  });
-
-  const onSubmit: SubmitHandler<BookingFormValues> = async data => {
-    if (!data.selectedRoomId) {
-      setErrorMessage('회의실을 선택해주세요.');
-      return;
-    }
-
-    try {
-      const result = await createMutation.mutateAsync({
-        roomId: data.selectedRoomId,
-        date: data.date,
-        start: data.startTime,
-        end: data.endTime,
-        attendees: data.attendees,
-        equipment: data.equipment,
-      });
-
+    mutationFn: createReservation,
+    onSuccess: (result, variables) => {
       if ('ok' in result && result.ok) {
+        queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
+        queryClient.invalidateQueries({ queryKey: ['myReservations'] });
         navigate('/', { state: { message: '예약이 완료되었습니다!' } });
         return;
       }
-
       const errResult = result as { message?: string };
-      setErrorMessage(errResult.message ?? '예약에 실패했습니다.');
-      setValue('selectedRoomId', null);
-    } catch (err: unknown) {
-      let serverMessage = '예약에 실패했습니다.';
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string } | undefined;
-        serverMessage = data?.message ?? serverMessage;
-      }
-      setErrorMessage(serverMessage);
-      setValue('selectedRoomId', null);
-    }
-  };
+      handleError(errResult.message ?? '예약에 실패했습니다.');
+    },
+    onError: (err: unknown) => {
+      const message =
+        axios.isAxiosError(err) && (err.response?.data as { message?: string })?.message
+          ? (err.response!.data as { message: string }).message
+          : '예약에 실패했습니다.';
+      handleError(message);
+    },
+  });
 
   const resetSelection = () => {
     setValue('selectedRoomId', null);
@@ -517,7 +494,24 @@ export function RoomBookingPage() {
           )}
 
           <Spacing size={16} />
-          <Button display="full" onClick={handleSubmit(onSubmit)} disabled={createMutation.isPending}>
+          <Button
+            display="full"
+            onClick={handleSubmit(data => {
+              if (!data.selectedRoomId) {
+                setErrorMessage('회의실을 선택해주세요.');
+                return;
+              }
+              createMutation.mutate({
+                roomId: data.selectedRoomId,
+                date: data.date,
+                start: data.startTime,
+                end: data.endTime,
+                attendees: data.attendees,
+                equipment: data.equipment,
+              });
+            })}
+            disabled={createMutation.isPending}
+          >
             {createMutation.isPending ? '예약 중...' : '확정'}
           </Button>
         </div>
