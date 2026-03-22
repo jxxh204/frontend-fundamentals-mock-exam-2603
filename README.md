@@ -36,3 +36,21 @@ yarn test
 ```
  <TimeLineRoom name={room.name} />
 ```
+
+- 타임라인은
+
+- 타임라인의 툴팁의 ui는 시간, 명수, 기기 종류 모두 잘 보이지만 Css는 세부사항이므로 Tooltip 컴포넌트로 분리한다.
+
+```
+  <Tooltip>
+    <>
+      <div>
+        {res.start} ~ {res.end}
+      </div>
+      <div>{res.attendees}명</div>
+      {res.equipment.length > 0 && (
+        <div>{res.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ')}</div>
+      )}
+    </>
+  </Tooltip>
+```
