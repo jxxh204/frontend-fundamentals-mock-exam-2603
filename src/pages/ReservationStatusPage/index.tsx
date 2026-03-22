@@ -6,6 +6,7 @@ import { Top, Spacing, Border, Button, Text, ListRow } from '_tosslib/components
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getMyReservations, cancelReservation } from 'pages/remotes';
 import { formatDate } from './utils';
+import { Banner } from './ui/Banner';
 import { Section } from './ui/Section';
 import { ReservationTimeline } from './ReservationTimeline';
 
@@ -83,7 +84,6 @@ export function ReservationStatusPage() {
 
       <Spacing size={24} />
 
-      {/* 날짜 선택 */}
       <Section>
         <Text typography="t5" fontWeight="bold" color={colors.grey900}>
           날짜 선택
@@ -96,13 +96,11 @@ export function ReservationStatusPage() {
       <Border size={8} />
       <Spacing size={24} />
 
-      {/* 예약 현황 타임라인 */}
       <Section>
         <Text typography="t5" fontWeight="bold" color={colors.grey900}>
           예약 현황
         </Text>
         <Spacing size={16} />
-
         <Suspense fallback={<div>로딩 중...</div>}>
           <ReservationTimeline date={date} />
         </Suspense>
@@ -115,24 +113,7 @@ export function ReservationStatusPage() {
       {/* 메시지 배너 */}
       {message && (
         <Section>
-          <div
-            css={css`
-              padding: 10px 14px;
-              border-radius: 10px;
-              background: ${message.type === 'success' ? colors.blue50 : colors.red50};
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            `}
-          >
-            <Text
-              typography="t7"
-              fontWeight="medium"
-              color={message.type === 'success' ? colors.blue600 : colors.red500}
-            >
-              {message.text}
-            </Text>
-          </div>
+          <Banner type={message.type} text={message.text} />
           <Spacing size={12} />
         </Section>
       )}
@@ -294,4 +275,3 @@ function DatePicker({ minDate, selectedDate, onChange }: DatePickerType) {
     </div>
   );
 }
-
