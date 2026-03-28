@@ -1,8 +1,8 @@
 import { css } from '@emotion/react';
 import { Suspense, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller, Watch } from 'react-hook-form';
 import { Top, Spacing, Border, Button, Text, Select } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, createReservation } from 'pages/remotes';
@@ -14,6 +14,17 @@ import { Section } from 'pages/ui/Section';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START } from 'pages/constants';
 import { generateTimeSlots } from 'pages/utils';
 import { AvailableRoomList } from './AvailableRoomList';
+import { parseAsArrayOf, parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
+import { queries } from 'queries';
+
+const pageParcers = {
+  date: parseAsString.withDefault(formatDate(new Date())),
+  startTime: parseAsString.withDefault(''),
+  endTime: parseAsString.withDefault(''),
+  attendees: parseAsInteger.withDefault(1),
+  equipment: parseAsArrayOf(parseAsString).withDefault([]),
+  floor: parseAsInteger.withDefault(1), // null
+};
 
 function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -35,86 +46,42 @@ interface BookingFormValues {
 export function RoomBookingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [queryStates, setQueryStates] = useQueryStates(pageParcers);
 
   const {
     control,
     handleSubmit,
-    watch,
     getValues,
     setValue,
     trigger,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<BookingFormValues>({
     mode: 'onChange',
     defaultValues: {
-      date: searchParams.get('date') || formatDate(new Date()),
-      startTime: searchParams.get('startTime') || '',
-      endTime: searchParams.get('endTime') || '',
-      attendees: Number(searchParams.get('attendees')) || 1,
-      equipment: searchParams.get('equipment')?.split(',').filter(Boolean) ?? [],
-      preferredFloor: searchParams.get('floor') ? Number(searchParams.get('floor')) : null,
+      date: queryStates.date,
+      startTime: queryStates.startTime,
+      endTime: queryStates.endTime,
+      attendees: queryStates.attendees,
+      equipment: queryStates.equipment,
+      preferredFloor: queryStates.floor,
       selectedRoomId: null,
     },
   });
 
-  const [date, startTime, endTime, attendees, equipment, preferredFloor] = watch([
-    'date',
-    'startTime',
-    'endTime',
-    'attendees',
-    'equipment',
-    'preferredFloor',
-  ]);
-
-  const syncToUrl = () => {
-    const { date, startTime, endTime, attendees, equipment, preferredFloor } = getValues();
-    const params: Record<string, string> = {};
-    if (date) params.date = date;
-    if (startTime) params.startTime = startTime;
-    if (endTime) params.endTime = endTime;
-    if (attendees > 1) params.attendees = String(attendees);
-    if (equipment.length > 0) params.equipment = equipment.join(',');
-    if (preferredFloor !== null) params.floor = String(preferredFloor);
-    setSearchParams(params, { replace: true });
-  };
-
   const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
-
-  const hasTimeInputs = startTime !== '' && endTime !== '';
-  const isFilterComplete = hasTimeInputs && !errors.endTime && !errors.attendees;
 
   const handleError = (message: string) => {
     setErrorMessage(message);
     setValue('selectedRoomId', null);
   };
 
-  const createMutation = useMutation({
-    mutationFn: createReservation,
-    onSuccess: (result, variables) => {
-      if ('ok' in result && result.ok) {
-        queryClient.invalidateQueries({ queryKey: ['reservations', variables.date] });
-        queryClient.invalidateQueries({ queryKey: ['myReservations'] });
-        navigate('/', { state: { message: '예약이 완료되었습니다!' } });
-        return;
-      }
-      const errResult = result as { message?: string };
-      handleError(errResult.message ?? '예약에 실패했습니다.');
-    },
-    onError: (err: unknown) => {
-      const message =
-        axios.isAxiosError(err) && (err.response?.data as { message?: string })?.message
-          ? (err.response!.data as { message: string }).message
-          : '예약에 실패했습니다.';
-      handleError(message);
-    },
-  });
-
   const resetSelection = () => {
     setValue('selectedRoomId', null);
     setErrorMessage(null);
-    syncToUrl();
+    const { date, startTime, endTime, attendees, equipment, preferredFloor } = getValues();
+
+    setQueryStates({ date, startTime, endTime, attendees, equipment, floor: preferredFloor });
   };
 
   return (
@@ -352,11 +319,11 @@ export function RoomBookingPage() {
                   aria-label="선호 층"
                 >
                   <option value="">전체</option>
-                  {[...new Set(rooms.map((room: { floor: number }) => room.floor))]
-                    .sort((a: number, b: number) => a - b)
-                    .map((f: number) => (
-                      <option key={f} value={f}>
-                        {f}층
+                  {[...new Set(rooms.map(room => room.floor))]
+                    .sort((a, b) => a - b)
+                    .map(floor => (
+                      <option key={floor} value={floor}>
+                        {floor}층
                       </option>
                     ))}
                 </Select>
@@ -413,47 +380,74 @@ export function RoomBookingPage() {
       <Spacing size={24} />
 
       {/* 예약 가능 회의실 목록 */}
-      {isFilterComplete && (
-        <Section>
-          <Suspense fallback={<div>로딩 중...</div>}>
-            <Controller
-              name="selectedRoomId"
-              control={control}
-              render={({ field }) => (
-                <AvailableRoomList
-                  title="예약 가능 회의실"
-                  filter={{ date, startTime, endTime, attendees, equipment, preferredFloor }}
-                  selectedRoomId={field.value}
-                  onSelect={field.onChange}
-                />
-                //TODO :   룸 컴포넌트가 보이도록 개선 필요
-              )}
-            />
-          </Suspense>
+      <Watch
+        name={['startTime', 'endTime', 'attendees', 'equipment', 'preferredFloor', 'date']}
+        control={control}
+        render={([startTime, endTime, attendees, equipment, preferredFloor, date]) => {
+          const isFilterComplete = startTime !== '' && endTime !== '' && !errors.endTime && !errors.attendees;
+          // 이름 확인 필요
+          if (isFilterComplete)
+            return (
+              <Section>
+                <Suspense fallback={<div>로딩 중...</div>}>
+                  <Controller
+                    name="selectedRoomId"
+                    control={control}
+                    render={({ field }) => (
+                      <AvailableRoomList
+                        title="예약 가능 회의실"
+                        filter={{ startTime, endTime, attendees, equipment, preferredFloor, date }}
+                        selectedRoomId={field.value}
+                        onSelect={field.onChange}
+                      />
+                      //TODO :   룸 컴포넌트가 보이도록 개선 필요
+                    )}
+                  />
+                </Suspense>
 
-          <Spacing size={16} />
-          <Button
-            display="full"
-            onClick={handleSubmit(data => {
-              if (!data.selectedRoomId) {
-                setErrorMessage('회의실을 선택해주세요.');
-                return;
-              }
-              createMutation.mutate({
-                roomId: data.selectedRoomId,
-                date: data.date,
-                start: data.startTime,
-                end: data.endTime,
-                attendees: data.attendees,
-                equipment: data.equipment,
-              });
-            })}
-            disabled={createMutation.isPending}
-          >
-            {createMutation.isPending ? '예약 중...' : '확정'}
-          </Button>
-        </Section>
-      )}
+                <Spacing size={16} />
+                <Button
+                  display="full"
+                  onClick={handleSubmit(async data => {
+                    if (!data.selectedRoomId) {
+                      setErrorMessage('회의실을 선택해주세요.');
+                      return;
+                    }
+                    return createReservation({
+                      roomId: data.selectedRoomId,
+                      date: data.date,
+                      start: data.startTime,
+                      end: data.endTime,
+                      attendees: data.attendees,
+                      equipment: data.equipment,
+                    })
+                      .then(async result => {
+                        if ('ok' in result && result.ok) {
+                          await Promise.all([
+                            queryClient.invalidateQueries(queries.reservations),
+                            queryClient.invalidateQueries({ queryKey: ['myReservations'] }),
+                          ]);
+                          navigate('/', { state: { message: '예약이 완료되었습니다!' } });
+                        }
+                        const errResult = result as { message?: string };
+                        handleError(errResult.message ?? '예약에 실패했습니다.');
+                      })
+                      .catch(err => {
+                        const message =
+                          axios.isAxiosError(err) && (err.response?.data as { message?: string })?.message
+                            ? (err.response!.data as { message: string }).message
+                            : '예약에 실패했습니다.';
+                        handleError(message);
+                      });
+                  })}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '예약 중...' : '확정'}
+                </Button>
+              </Section>
+            );
+        }}
+      />
 
       <Spacing size={24} />
     </div>

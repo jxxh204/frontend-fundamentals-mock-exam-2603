@@ -8,13 +8,11 @@ import { generateTimeSlots, timeToMinutes } from '../utils';
 import { Tooltip } from '../ui/Tooltip';
 import type { Room, Reservation } from './types';
 import { EQUIPMENT_LABELS, TIMELINE_END, TIMELINE_START, TOTAL_MINUTES } from 'pages/constants';
+import { queries } from 'queries';
 
 export function ReservationTimeline({ date }: { date: string }) {
   const [{ data: rooms }, { data: reservations }] = useSuspenseQueries({
-    queries: [
-      { queryKey: ['rooms'], queryFn: getRooms },
-      { queryKey: ['reservations', date], queryFn: () => getReservations(date) },
-    ],
+    queries: [{ queryKey: ['rooms'], queryFn: getRooms }, queries.reservations(date)],
   });
 
   const [activeReservation, setActiveReservation] = useState<string | null>(null);

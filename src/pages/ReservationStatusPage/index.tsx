@@ -12,21 +12,7 @@ import { ReservationTimeline } from './ReservationTimeline';
 import { DatePicker } from 'pages/components/DatePicker';
 import { EQUIPMENT_LABELS } from 'pages/constants';
 import { EmptyRoom } from 'pages/ui/EmptyReservation';
-
-type Room = {
-  id: string;
-  name: string;
-};
-
-type MyReservation = {
-  id: string;
-  roomId: string;
-  date: string;
-  start: string;
-  end: string;
-  attendees: number;
-  equipment: string[];
-};
+import { queries } from 'queries';
 
 export function ReservationStatusPage() {
   const navigate = useNavigate(); // 예약하기 버튼
@@ -37,18 +23,18 @@ export function ReservationStatusPage() {
   // 내 예약
   const { data: rooms = [] } = useQuery({ queryKey: ['rooms'], queryFn: getRooms });
 
-  // 메세지 배너
-  const location = useLocation();
-  const locationState = location.state as { message?: string } | null;
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
-    locationState?.message ? { type: 'success', text: locationState.message } : null
-  );
   // 내 예약
   const { data: myReservationList = [] } = useQuery({
     queryKey: ['myReservations'],
     queryFn: () => getMyReservations(),
   });
 
+  // 메세지 배너
+  const location = useLocation();
+  const locationState = location.state as { message?: string } | null;
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    locationState?.message ? { type: 'success', text: locationState.message } : null
+  );
   useEffect(() => {
     if (locationState?.message) {
       window.history.replaceState({}, '');
@@ -137,15 +123,15 @@ export function ReservationStatusPage() {
               gap: 10px;
             `}
           >
-            {myReservationList.map((reservation: MyReservation) => {
-              const currentRoomId = reservation.roomId;
-              const RoomName = rooms.find((room: Room) => room.id === currentRoomId)?.name ?? currentRoomId;
+            {myReservationList.map(reservation => {
               return (
                 <MyReservationRoom
-                  roomName={RoomName}
+                  roomName={rooms.find(room => room.id === reservation.roomId)?.name ?? reservation.roomId}
                   description={`${reservation.date} ${reservation.start}~${reservation.end} · ${
                     reservation.attendees
-                  }명 · ${reservation.equipment.map((e: string) => EQUIPMENT_LABELS[e]).join(', ') || '장비 없음'}`}
+                  }명 · ${
+                    reservation.equipment.map(equipment => EQUIPMENT_LABELS[equipment]).join(', ') || '장비 없음'
+                  }`}
                   key={reservation.id}
                 >
                   <Button
@@ -157,7 +143,7 @@ export function ReservationStatusPage() {
                       if (window.confirm('정말 취소하시겠습니까?')) {
                         cancelReservation(reservation.id)
                           .then(() => {
-                            queryClient.invalidateQueries({ queryKey: ['reservations'] });
+                            queryClient.invalidateQueries(queries.reservations);
                             queryClient.invalidateQueries({ queryKey: ['myReservations'] });
                             setMessage({ type: 'success', text: '예약이 취소되었습니다.' });
                           })

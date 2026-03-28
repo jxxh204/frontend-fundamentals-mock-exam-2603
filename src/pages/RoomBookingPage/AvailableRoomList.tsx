@@ -6,6 +6,7 @@ import { getRooms, getReservations } from 'pages/remotes';
 import { EQUIPMENT_LABELS } from 'pages/constants';
 import { 수용가능, 장비충족, 선호층일치, 시간충돌없음, 층별이름순 } from 'pages/utils';
 import { EmptyRoom } from 'pages/ui/EmptyReservation';
+import { queries } from 'queries';
 
 type RoomFilter = {
   date: string;
@@ -27,10 +28,7 @@ export function AvailableRoomList({ title, filter, selectedRoomId, onSelect }: A
   const { date, startTime, endTime, attendees, equipment, preferredFloor } = filter;
 
   const [{ data: rooms }, { data: reservations }] = useSuspenseQueries({
-    queries: [
-      { queryKey: ['rooms'], queryFn: getRooms },
-      { queryKey: ['reservations', date], queryFn: () => getReservations(date) },
-    ],
+    queries: [{ queryKey: ['rooms'], queryFn: getRooms }, queries.reservations(date)],
   });
 
   const availableRooms = rooms
